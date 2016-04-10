@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.Scanner;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.cluster.ClusterGroup;
 
 /**
  *
