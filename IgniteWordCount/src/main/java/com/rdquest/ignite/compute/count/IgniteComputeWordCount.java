@@ -17,8 +17,13 @@ import org.apache.ignite.Ignition;
 public class IgniteComputeWordCount {
 
     public static void main(String[] args) {
-        try (Ignite ignite = Ignition.start()) {
-            
+        new IgniteComputeWordCount().run();
+
+    }
+
+    public void run() {
+        try (Ignite ignite = Ignition.start("C:\\config\\example-ignite.xml")) {
+
             Scanner reader = new Scanner(System.in);
             System.out.println("Please Enter a Sentence To Be Counted: ");
             String toCount = reader.next();

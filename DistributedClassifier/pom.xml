@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.rdquest</groupId>
-    <artifactId>IgniteWordCount</artifactId>
+    <artifactId>DistributedClassifer</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -17,6 +17,27 @@
             <artifactId>ignite-spring</artifactId>
             <version>1.4.0</version>
         </dependency>
+        <dependency>
+            <groupId>net.sf</groupId>
+            <artifactId>javaml</artifactId>
+            <version>0.1.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.lucarosellini.rJava</groupId>
+            <artifactId>JRIEngine</artifactId>
+            <version>0.9-7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.lucarosellini.rJava</groupId>
+            <artifactId>JRIEngine</artifactId>
+            <version>0.9-7</version>
+        </dependency>
+        <dependency>
+            <groupId>be.abeel</groupId>
+            <artifactId>ajt</artifactId>
+            <version>2.11</version>
+        </dependency>
+
     </dependencies>
     
     <properties>
@@ -47,7 +68,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.rdquest.ignite.compute.count.IgniteComputeWordCount</mainClass>
+                                    <mainClass>com.rdquest.ignite.compute.runner.ClassificationRunner</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
@@ -56,5 +77,5 @@
             </plugin>
         </plugins>
     </build>
-    
+    <name>DistributedClassifier</name>
 </project>

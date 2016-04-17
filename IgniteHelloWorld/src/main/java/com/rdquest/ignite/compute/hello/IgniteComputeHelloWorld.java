@@ -15,7 +15,7 @@ import org.apache.ignite.cluster.ClusterGroup;
 public class IgniteComputeHelloWorld {
 
     public static void main(String[] args) {
-        try (Ignite ignite = Ignition.start()) {
+        try (Ignite ignite = Ignition.start("C:\\config\\example-ignite.xml")) {
             ClusterGroup rmts = ignite.cluster().forRemotes();
 
             // All nodes
