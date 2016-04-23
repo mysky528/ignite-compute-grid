@@ -6,9 +6,9 @@ package com.rdquest.ignite.compute.count;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Scanner;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.configuration.IgniteConfiguration;
 
 /**
  *
@@ -22,23 +22,32 @@ public class IgniteComputeWordCount {
     }
 
     public void run() {
-        try (Ignite ignite = Ignition.start("C:\\config\\example-ignite.xml")) {
+        IgniteConfiguration configuration = new IgniteConfiguration();
 
-            Scanner reader = new Scanner(System.in);
-            System.out.println("Please Enter a Sentence To Be Counted: ");
-            String toCount = reader.next();
+        configuration.setPeerClassLoadingEnabled(true);
 
-            Collection<Integer> result = ignite.compute().apply(
+        try (Ignite ignite = Ignition.start(configuration)) {
+
+            System.out.println(">>> Counting letters in the sentence: ");
+            System.out.println("Count characters using closure");
+
+            // Execute closure on all cluster nodes.
+            Collection<Integer> res = ignite.compute().apply(
                     (String word) -> {
-                        System.out.println("Counting characters in word " + word + " ");
+                        System.out.println();
+                        System.out.println(">>> Printing '" + word + "' on this node from ignite job.");
+
+                        // Return number of letters in the word.
                         return word.length();
                     },
-                    Arrays.asList(toCount.split(" "))
+                    // Job parameters. Ignite will create as many jobs as there are parameters.
+                    Arrays.asList("Count characters using closure".split(" "))
             );
 
-            int total = result.stream().mapToInt(Integer::intValue).sum();
+            int sum = res.stream().mapToInt(i -> i).sum();
 
-            System.out.println("Total Characters " + total);
+            System.out.println();
+            System.out.println(">>> Total number of characters in the phrase is '" + sum + "'.");
         }
     }
 

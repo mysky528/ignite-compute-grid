@@ -4,46 +4,42 @@
  */
 package com.rdquest.ignite.callables;
 
-import com.rdquest.ignite.runner.ClassificationRunner;
-import java.util.List;
 import net.sf.javaml.classification.Classifier;
-import net.sf.javaml.classification.KNearestNeighbors;
 import net.sf.javaml.classification.evaluation.EvaluateDataset;
 import net.sf.javaml.core.Dataset;
-import net.sf.javaml.core.DefaultDataset;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.lang.IgniteCallable;
 
 /**
  *
  * @author Corey
+ * @param <T>
  */
-public class ClassificationNode implements IgniteCallable<ClassificationResponse> {
+public class ClassificationNode<T> implements IgniteCallable<T> {
 
-//    private final IgniteCache<String, List> cache;
-//    private final String cacheKey;
-    private final Dataset training;
+    private final Classifier classifier;
+    
+    private final Dataset dataset;
 
-    private final Dataset classification;
-
-    public ClassificationNode(Dataset training, Dataset classification) {
-//        this.cache = cache;
-//        this.cacheKey = cacheKey;
-        this.classification = classification;
-        this.training = training;
+    /**
+     *
+     * @param dataset
+     * @param classifier
+     */
+    public ClassificationNode(Dataset dataset, Classifier classifier) {
+        this.classifier = classifier;
+        this.dataset = dataset;
     }
 
     @Override
-    public ClassificationResponse call() throws Exception {
+    public T call() throws Exception {
 
-        Classifier knn = new KNearestNeighbors(5);
-        knn.buildClassifier(training);
+        System.out.println("Performing Performance Evalutations");
 
         ClassificationResponse response = new ClassificationResponse();
 
-        response.setPerformance(EvaluateDataset.testDataset(knn, classification));
+        response.setPerformance(EvaluateDataset.testDataset(classifier, dataset));
 
-        return response;
+        return (T) response;
 
     }
 

@@ -5,27 +5,36 @@
 package com.rdquest.ignite.runner;
 
 import com.rdquest.ignite.callables.ClassificationNode;
+import com.rdquest.ignite.callables.ClassificationResponse;
+import com.rdquest.ignite.callables.ClassificationTrainingNode;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import net.sf.javaml.classification.Classifier;
+import net.sf.javaml.classification.evaluation.PerformanceMeasure;
 import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.DefaultDataset;
 import net.sf.javaml.tools.data.FileHandler;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 
 /**
  *
  * @author Corey
  */
 public class ClassificationRunner {
-    
+
     public static final String TRAINING_SET = "Training";
 
     public static void main(String[] args) {
@@ -33,83 +42,120 @@ public class ClassificationRunner {
 
     }
 
+    /**
+     *
+     */
     public void run() {
-        try (Ignite ignite = Ignition.start("C:\\config\\example-ignite.xml")) {
+        IgniteConfiguration configuration = new IgniteConfiguration();
 
-            CacheConfiguration<String, Dataset> cfg = new CacheConfiguration<>();
-            cfg.setName("ClassificationData");
-            cfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-            
-            final IgniteCache<String, Dataset> cache = ignite.getOrCreateCache(cfg);
-            
-            File userSpecified;
+        configuration.setPeerClassLoadingEnabled(true);
+
+        try (Ignite ignite = Ignition.start(configuration)) {
+
+            File trainingDataPath;
+            File actualDataPath;
+            Integer numberOfNodes;
+            Integer classIndex;
+
             Scanner reader = new Scanner(System.in);
 
-            System.out.println("Please provide the path to your dataset:");
+            System.out.println("Please provide the path to your training dataset: ");
 
-            userSpecified = new File(reader.next());
+            trainingDataPath = new File(reader.next());
 
-            // Assumptions
-            // Iris dataset size = 150
-            // 100 learning data
-            // 50 compare data
+            System.out.println("Please provide the path to your actual (non-training) data: ");
+
+            actualDataPath = new File(reader.next());
+
+            System.out.println("Please indicate the index of the class: ");
+            classIndex = reader.nextInt();
+
+            System.out.println("Please indicate the number of nodes available: ");
+            numberOfNodes = reader.nextInt();
+
             ExecutorService exec = ignite.executorService();
-            
 
             try {
-                Dataset originalData = FileHandler.loadDataset(userSpecified, 4, ",");
+                Dataset trainingData = FileHandler.loadDataset(trainingDataPath, classIndex, ",");
 
-                if (!originalData.isEmpty() && originalData.size() > 1) {
-                    Dataset trainingData = new DefaultDataset(originalData.subList(0, 99));
-                    cache.put(TRAINING_SET, trainingData);
-                    Dataset classificationData1 = new DefaultDataset(originalData.subList(100, 109));
-                    cache.put("1", classificationData1);
-                    exec.submit(new ClassificationNode(trainingData, classificationData1));
-                    Dataset classificationData2 = new DefaultDataset(originalData.subList(110, 119));
-                    cache.put("2", classificationData2);
-                    exec.submit(new ClassificationNode(trainingData, classificationData2));
-                    Dataset classificationData3 = new DefaultDataset(originalData.subList(120, 129));
-                    cache.put("3", classificationData3);
-                    exec.submit(new ClassificationNode(trainingData, classificationData3));
-                    Dataset classificationData4 = new DefaultDataset(originalData.subList(130, 139));
-                    cache.put("4", classificationData4);
-                    exec.submit(new ClassificationNode(trainingData, classificationData4));
-                    Dataset classificationData5 = new DefaultDataset(originalData.subList(140, 149));
-                    cache.put("5", classificationData5);
-                    exec.submit(new ClassificationNode(trainingData, classificationData5));
+                if (!trainingData.isEmpty() && trainingData.size() > 1) {
+
+                    List<Future<ClassificationResponse>> tasks = new ArrayList<>();
+
+                    Long startTime = System.nanoTime();
+
+                    Future<Classifier> futureResponse = exec.submit(
+                            new ClassificationTrainingNode<Classifier>(trainingData, 5));
+                    Classifier classifier = futureResponse.get(10, TimeUnit.MINUTES);
+
+                    // Crude dataset splits
+                    Dataset realData = FileHandler.loadDataset(actualDataPath, classIndex, ",");
+
+                    if (!realData.isEmpty() && realData.size() > 1) {
+
+                        List<Dataset> splitSets = new ArrayList<>();
+
+                        int remainder = (realData.size() % numberOfNodes);
+                        int sizeOfSplitSets = (realData.size() / numberOfNodes);
+                        int lastSet = (remainder + sizeOfSplitSets);
+                        if ((remainder) == 0) { // 
+                            for (int i = 0; i < realData.size(); i+= sizeOfSplitSets) {
+                                splitSets.add(new DefaultDataset(realData.subList(i, i + sizeOfSplitSets)));
+                            }
+                        } else {
+                            for (int i = 0; i < (realData.size() - lastSet); i+= sizeOfSplitSets) {
+                                splitSets.add(new DefaultDataset(realData.subList(i, i + sizeOfSplitSets)));
+                            }
+                            // Now add the last
+                            splitSets.add(
+                                    new DefaultDataset(realData.subList(
+                                            (realData.size() - lastSet), realData.size() - 1)));
+
+                        }
+
+                        splitSets.parallelStream().forEach((set) -> {
+                            tasks.add(exec.submit(
+                                    new ClassificationNode<ClassificationResponse>(set, classifier)));
+                        });
+                    }
+                    while (isExecuting(tasks)) {
+                    }
+
+                    System.out.println("Execution Delta (Milliseconds): " + (System.nanoTime() - startTime) / 1000000);
+                    // Done Now
+                    int taskNumber = 1;
+                    for (Future<ClassificationResponse> task : tasks) {
+                        System.out.println("Performance for task: " + taskNumber++);
+                        for (Entry<Object, PerformanceMeasure> performance
+                                : task.get().getPerformance().entrySet()) {
+                            System.out.println("Performance: " + performance.getValue());
+
+                        }
+                    }
+
                 }
-                
-                //Collection<Integer> result = ignite.compute().apply(new ClassificationNode());
-                
-            } catch (IOException ex) {
+
+            } catch (InterruptedException | ExecutionException | IOException ex) {
+                Logger.getLogger(ClassificationRunner.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (TimeoutException ex) {
                 Logger.getLogger(ClassificationRunner.class.getName()).log(Level.SEVERE, null, ex);
             }
-
-          //  Collection<IgniteCallable<Double>> calls = new ArrayList<>();
-            // calls.add(new DecisionComputer());
-
-            // Execute collection of callables on the ignite.
-            //  Double result = ignite.compute().call(new DecisionComputer());
-//            int sum = res.stream().mapToInt(i -> i).sum();
-            //   System.out.println(result);
-//            System.out.println(">>> Total number of characters in the phrase is '" + sum + "'.");
-//            System.out.println(">>> Check all nodes for output (this nod
-//            Scanner reader = new Scanner(System.in);
-//            System.out.println("Please Specify A CSV File: ");
-//            String toCount = reader.next();
-//            Collection<Integer> result = ignite.compute().apply(
-//                    (String word) -> {
-//                        System.out.println("Counting characters in word " + word + " ");
-//                        return word.length();
-//                    },
-//                    Arrays.asList(toCount.split(" "))
-//            );
-//
         }
     }
 
-    private void performClassification(Dataset dataset) {
-
+    /**
+     *
+     * @param tasks
+     * @return
+     */
+    private boolean isExecuting(List<Future<ClassificationResponse>> tasks) {
+        boolean atLeastOneRunning = false;
+        for (Future task : tasks) {
+            if (!task.isDone()) {
+                atLeastOneRunning = true;
+            }
+        }
+        return atLeastOneRunning;
     }
 
 }

@@ -7,6 +7,7 @@ package com.rdquest.ignite.compute.hello;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.configuration.IgniteConfiguration;
 
 /**
  *
@@ -15,7 +16,11 @@ import org.apache.ignite.cluster.ClusterGroup;
 public class IgniteComputeHelloWorld {
 
     public static void main(String[] args) {
-        try (Ignite ignite = Ignition.start("C:\\config\\example-ignite.xml")) {
+
+        IgniteConfiguration configuration = new IgniteConfiguration();
+
+        configuration.setPeerClassLoadingEnabled(true);
+        try (Ignite ignite = Ignition.start(configuration)) {
             ClusterGroup rmts = ignite.cluster().forRemotes();
 
             // All nodes
