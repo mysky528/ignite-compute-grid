@@ -73,19 +73,31 @@ public class ClassificationRunner {
             System.out.println("Please indicate the number of nodes available: ");
             numberOfNodes = reader.nextInt();
 
+            /* The Apache Ignite executor service to be used to execute IgniteCallable
+            * classes.
+             */
             ExecutorService exec = ignite.executorService();
 
             try {
+                // Get the training dataset for the KNN algorithm
+                // Classindex is the columnId of the class
+                // For now we only handle data that's split by commas
                 Dataset trainingData = FileHandler.loadDataset(trainingDataPath, classIndex, ",");
 
                 if (!trainingData.isEmpty() && trainingData.size() > 1) {
 
+                    // Future is used to get the response when the callable is complete
                     List<Future<ClassificationResponse>> tasks = new ArrayList<>();
 
+                    // Start tracking run time
+                    //TODO Could eventually use better timing library
                     Long startTime = System.nanoTime();
 
                     Future<Classifier> futureResponse = exec.submit(
-                            new ClassificationTrainingNode<Classifier>(trainingData, 5));
+                            new ClassificationTrainingNode(trainingData, 5));
+                    // The classifer from the training dataset
+                    // Wait up to ten minutes for completion. Really arbitrary, and shouldn't
+                    // take that long
                     Classifier classifier = futureResponse.get(10, TimeUnit.MINUTES);
 
                     // Crude dataset splits
@@ -99,11 +111,11 @@ public class ClassificationRunner {
                         int sizeOfSplitSets = (realData.size() / numberOfNodes);
                         int lastSet = (remainder + sizeOfSplitSets);
                         if ((remainder) == 0) { // 
-                            for (int i = 0; i < realData.size(); i+= sizeOfSplitSets) {
+                            for (int i = 0; i < realData.size(); i += sizeOfSplitSets) {
                                 splitSets.add(new DefaultDataset(realData.subList(i, i + sizeOfSplitSets)));
                             }
                         } else {
-                            for (int i = 0; i < (realData.size() - lastSet); i+= sizeOfSplitSets) {
+                            for (int i = 0; i < (realData.size() - lastSet); i += sizeOfSplitSets) {
                                 splitSets.add(new DefaultDataset(realData.subList(i, i + sizeOfSplitSets)));
                             }
                             // Now add the last
@@ -112,41 +124,45 @@ public class ClassificationRunner {
                                             (realData.size() - lastSet), realData.size() - 1)));
 
                         }
-
+                        // Utilization of Java 8 parallel stream for performance
+                        // Essentially launches the nodes in parallel
                         splitSets.parallelStream().forEach((set) -> {
                             tasks.add(exec.submit(
-                                    new ClassificationNode<ClassificationResponse>(set, classifier)));
+                                    new ClassificationNode(set, classifier)));
                         });
                     }
                     while (isExecuting(tasks)) {
+                        // Note: this is a crude way of doing this.
                     }
 
                     System.out.println("Execution Delta (Milliseconds): " + (System.nanoTime() - startTime) / 1000000);
                     // Done Now
+                    // Print out the results
                     int taskNumber = 1;
                     for (Future<ClassificationResponse> task : tasks) {
                         System.out.println("Performance for task: " + taskNumber++);
                         for (Entry<Object, PerformanceMeasure> performance
                                 : task.get().getPerformance().entrySet()) {
                             System.out.println("Performance: " + performance.getValue());
+                            System.out.println("Accuracy: " + performance.getValue().getAccuracy());
 
                         }
                     }
 
                 }
 
-            } catch (InterruptedException | ExecutionException | IOException ex) {
-                Logger.getLogger(ClassificationRunner.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (TimeoutException ex) {
-                Logger.getLogger(ClassificationRunner.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (InterruptedException | ExecutionException | IOException | TimeoutException ex) {
+                String failureMessage = "An error occured while running classification";
+                Logger.getLogger(ClassificationRunner.class.getName()).log(Level.SEVERE, failureMessage, ex);
             }
         }
     }
 
     /**
+     * Check to see if the tasks are still executing
      *
-     * @param tasks
-     * @return
+     * @param tasks the tasks running on the classification nodes
+     * @return boolean to determine if still executing
      */
     private boolean isExecuting(List<Future<ClassificationResponse>> tasks) {
         boolean atLeastOneRunning = false;
@@ -156,6 +172,15 @@ public class ClassificationRunner {
             }
         }
         return atLeastOneRunning;
+    }
+
+    /**
+     * Prints the output from the Classifier
+     *
+     * @param classifier the classifier to be printed
+     */
+    private void printClassifer(Classifier classifier) {
+
     }
 
 }

@@ -1,4 +1,5 @@
-com\rdquest\ignite\callables\ClassificationNode.class
 com\rdquest\ignite\callables\ClassificationDatasets.class
+com\rdquest\ignite\callables\ClassificationTrainingNode.class
+com\rdquest\ignite\callables\ClassificationNode.class
 com\rdquest\ignite\runner\ClassificationRunner.class
 com\rdquest\ignite\callables\ClassificationResponse.class
