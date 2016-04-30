@@ -1,0 +1,4 @@
+com\rdquest\ignite\callables\ClassificationResponse.class
+com\rdquest\ignite\callables\ClassificationTrainingNode.class
+com\rdquest\ignite\ml\request\handlers\IgniteKnnHandler.class
+com\rdquest\ignite\ml\request\handlers\IgniteMLHandler.class
