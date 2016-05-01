@@ -4,9 +4,9 @@
  */
 package com.rdquest.ignite.ml.api.executor;
 
+import com.rdquest.ignite.ml.api.exceptions.IgniteMLException;
 import com.rdquest.ignite.ml.api.requests.IgniteMLRequest;
 import com.rdquest.ignite.ml.api.responses.IgniteMLResponse;
-import org.apache.ignite.Ignite;
 
 /**
  *
@@ -14,17 +14,12 @@ import org.apache.ignite.Ignite;
  */
 public interface IgniteExecutor {
 
-    /**
-     *
-     * @return
-     */
-    public Ignite createInstance();
-
-    /**
-     *
-     * @param request
-     * @return
-     */
-    public IgniteMLResponse handleRequest(IgniteMLRequest request);
+	/**
+	 *
+	 * @param <T>
+	 * @param request
+	 * @return
+	 */
+	public <T extends IgniteMLResponse> T handleRequest(T response, IgniteMLRequest request) throws IgniteMLException;
 
 }
