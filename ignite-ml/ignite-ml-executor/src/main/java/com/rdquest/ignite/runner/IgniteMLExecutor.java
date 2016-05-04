@@ -42,7 +42,7 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 	}
 
 	@Override
-	public <T extends IgniteMLResponse> T handleRequest(T responseType, IgniteMLRequest request)
+	public <T extends IgniteMLResponse> T handleRequest(IgniteMLRequest request)
 			throws IgniteMLException {
 		// Lookup the correct handler
 		IgniteMLHandler<IgniteMLRequest, T> handler = handlerMap.get(request.getClass());

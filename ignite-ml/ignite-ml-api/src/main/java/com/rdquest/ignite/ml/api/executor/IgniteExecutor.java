@@ -20,6 +20,6 @@ public interface IgniteExecutor {
 	 * @param request
 	 * @return
 	 */
-	public <T extends IgniteMLResponse> T handleRequest(T response, IgniteMLRequest request) throws IgniteMLException;
+	public <T extends IgniteMLResponse> T handleRequest(IgniteMLRequest request) throws IgniteMLException;
 
 }
