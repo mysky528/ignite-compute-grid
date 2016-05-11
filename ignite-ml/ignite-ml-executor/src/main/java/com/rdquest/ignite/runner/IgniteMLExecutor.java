@@ -12,6 +12,11 @@ import com.rdquest.ignite.ml.api.exceptions.IgniteMLException;
 import com.rdquest.ignite.ml.api.executor.IgniteExecutor;
 import com.rdquest.ignite.ml.api.executor.IgniteMLHandler;
 import com.rdquest.ignite.ml.request.handlers.IgniteKnnHandler;
+
+import weka.classifiers.Classifier;
+import weka.classifiers.lazy.IBk;
+import weka.core.Instances;
+
 import com.rdquest.ignite.ml.api.requests.IgniteKnnRequest;
 import com.rdquest.ignite.ml.api.requests.IgniteMLRequest;
 import com.rdquest.ignite.ml.api.responses.IgniteMLResponse;
@@ -31,25 +36,33 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 
 	public static final String TRAINING_SET = "Training";
 
-	// Initializer Block
-	{
-		IgniteConfiguration configuration = new IgniteConfiguration();
+	private Instances trainingSet;
 
+	private Classifier classifier;
+
+	public IgniteMLExecutor(Instances trainingSet) throws Exception {
+		IgniteConfiguration configuration = new IgniteConfiguration();
+		
+		Classifier ibk = new IBk();
+		ibk.buildClassifier(trainingSet);
+		this.setClassifier(ibk);
+		
 		configuration.setPeerClassLoadingEnabled(true);
 		Ignite ignite = Ignition.start(configuration);
 		this.setIgniteInstance(ignite);
+		this.setTrainingSet(trainingSet);
+
 		registerHandlers();
 	}
 
 	@Override
-	public <T extends IgniteMLResponse> T handleRequest(IgniteMLRequest request)
-			throws IgniteMLException {
+	public <T extends IgniteMLResponse> T handleRequest(IgniteMLRequest request) throws IgniteMLException {
 		// Lookup the correct handler
 		IgniteMLHandler<IgniteMLRequest, T> handler = handlerMap.get(request.getClass());
 		if (handler == null) {
 			throw new IgniteMLException("Unable to find handler for request class: " + request.getClass().getName());
 		}
-		return handler.run(request, igniteInstance.executorService(), igniteInstance.cluster().nodes().size());
+		return handler.run(request, igniteInstance.executorService(), igniteInstance.cluster().nodes().size(), getClassifier());
 	}
 
 	/**
@@ -91,157 +104,20 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 		this.igniteInstance = igniteInstance;
 	}
 
-	// /**
-	// *
-	// */
-	// public void run() {
-	// IgniteConfiguration configuration = new IgniteConfiguration();
-	//
-	// configuration.setPeerClassLoadingEnabled(true);
-	//
-	// try (Ignite ignite = Ignition.start(configuration)) {
-	//
-	// File trainingDataPath;
-	// File actualDataPath;
-	// Integer numberOfNodes;
-	// Integer classIndex;
-	//
-	// Scanner reader = new Scanner(System.in);
-	//
-	// System.out.println("Please provide the path to your training dataset: ");
-	//
-	// trainingDataPath = new File(reader.next());
-	//
-	// System.out.println("Please provide the path to your actual (non-training)
-	// data: ");
-	//
-	// actualDataPath = new File(reader.next());
-	//
-	// System.out.println("Please indicate the index of the class: ");
-	// classIndex = reader.nextInt();
-	//
-	// System.out.println("Please indicate the number of nodes available: ");
-	// numberOfNodes = reader.nextInt();
-	//
-	// /*
-	// * The Apache Ignite executor service to be used to execute
-	// * IgniteCallable classes.
-	// */
-	// ExecutorService exec = ignite.executorService();
-	//
-	// // try {
-	// // // Get the training dataset for the KNN algorithm
-	// // // Classindex is the columnId of the class
-	// // // For now we only handle data that's split by commas
-	// // Dataset trainingData = FileHandler.loadDataset(trainingDataPath,
-	// // classIndex, ",");
-	// //
-	// // if (!trainingData.isEmpty() && trainingData.size() > 1) {
-	// //
-	// // // Future is used to get the response when the callable is
-	// // complete
-	// // List<Future<ClassificationResponse>> tasks = new ArrayList<>();
-	// //
-	// // // Start tracking run time
-	// // //TODO Could eventually use better timing library
-	// // Long startTime = System.nanoTime();
-	// //
-	// // Future<Classifier> futureResponse = exec.submit(
-	// // new ClassificationTrainingNode(trainingData, 5));
-	// // // The classifer from the training dataset
-	// // // Wait up to ten minutes for completion. Really arbitrary, and
-	// // shouldn't
-	// // // take that long
-	// // Classifier classifier = futureResponse.get(10, TimeUnit.MINUTES);
-	// //
-	// // // Crude dataset splits
-	// // Dataset realData = FileHandler.loadDataset(actualDataPath,
-	// // classIndex, ",");
-	// //
-	// // if (!realData.isEmpty() && realData.size() > 1) {
-	// //
-	// // List<Dataset> splitSets = new ArrayList<>();
-	// //
-	// // int remainder = (realData.size() % numberOfNodes);
-	// // int sizeOfSplitSets = (realData.size() / numberOfNodes);
-	// // int lastSet = (remainder + sizeOfSplitSets);
-	// // if ((remainder) == 0) { //
-	// // for (int i = 0; i < realData.size(); i += sizeOfSplitSets) {
-	// // splitSets.add(new DefaultDataset(realData.subList(i, i +
-	// // sizeOfSplitSets)));
-	// // }
-	// // } else {
-	// // for (int i = 0; i < (realData.size() - lastSet); i +=
-	// // sizeOfSplitSets) {
-	// // splitSets.add(new DefaultDataset(realData.subList(i, i +
-	// // sizeOfSplitSets)));
-	// // }
-	// // // Now add the last
-	// // splitSets.add(
-	// // new DefaultDataset(realData.subList(
-	// // (realData.size() - lastSet), realData.size() - 1)));
-	// //
-	// // }
-	// // // Utilization of Java 8 parallel stream for performance
-	// // // Essentially launches the nodes in parallel
-	// // splitSets.parallelStream().forEach((set) -> {
-	// // tasks.add(exec.submit(
-	// // new ClassificationNode(set, classifier)));
-	// // });
-	// // }
-	// // while (isExecuting(tasks)) {
-	// // // Note: this is a crude way of doing this.
-	// // }
-	// //
-	// // System.out.println("Execution Delta (Milliseconds): " +
-	// // (System.nanoTime() - startTime) / 1000000);
-	// // // Done Now
-	// // // Print out the results
-	// // int taskNumber = 1;
-	// // for (Future<ClassificationResponse> task : tasks) {
-	// // System.out.println("Performance for task: " + taskNumber++);
-	// // for (Entry<Object, PerformanceMeasure> performance
-	// // : task.get().getPerformance().entrySet()) {
-	// // System.out.println("Performance: " + performance.getValue());
-	// // System.out.println("Accuracy: " +
-	// // performance.getValue().getAccuracy());
-	// //
-	// // }
-	// // }
-	// //
-	// // }
-	// //
-	// // } catch (InterruptedException | ExecutionException | IOException
-	// // | TimeoutException ex) {
-	// // String failureMessage = "An error occured while running
-	// // classification";
-	// //
-	// Logger.getLogger(ClassificationRunner.class.getName()).log(Level.SEVERE,
-	// // failureMessage, ex);
-	// // }
-	// }
-	// }
-	//
-	// public static void main(String[] args) {
-	// new IgniteMLExecutor().run();
-	//
-	// }
-	//
-	// /**
-	// * Check to see if the tasks are still executing
-	// *
-	// * @param tasks
-	// * the tasks running on the classification nodes
-	// * @return boolean to determine if still executing
-	// */
-	// private boolean isExecuting(List<Future<ClassificationResponse>> tasks) {
-	// boolean atLeastOneRunning = false;
-	// for (Future task : tasks) {
-	// if (!task.isDone()) {
-	// atLeastOneRunning = true;
-	// }
-	// }
-	// return atLeastOneRunning;
-	// }
+	public Instances getTrainingSet() {
+		return trainingSet;
+	}
+
+	public void setTrainingSet(Instances trainingSet) {
+		this.trainingSet = trainingSet;
+	}
+
+	public Classifier getClassifier() {
+		return classifier;
+	}
+
+	public void setClassifier(Classifier classifier) {
+		this.classifier = classifier;
+	}
 
 }

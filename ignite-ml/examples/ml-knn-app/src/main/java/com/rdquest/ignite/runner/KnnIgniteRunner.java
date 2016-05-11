@@ -17,6 +17,7 @@ import com.rdquest.ignite.ml.api.requests.IgniteKnnRequest;
 import com.rdquest.ignite.ml.api.responses.IgniteKnnResponse;
 
 import weka.core.Instances;
+import weka.core.converters.CSVLoader;
 
 /**
  *
@@ -26,11 +27,8 @@ public final class KnnIgniteRunner {
 
 	public static void main(String[] args) {
 
-		IgniteExecutor executor = IgniteExecutorFactory.createInstance();
-
 		File trainingDataPath;
 		File actualDataPath;
-		Integer classIndex;
 
 		Scanner reader = new Scanner(System.in);
 
@@ -42,36 +40,32 @@ public final class KnnIgniteRunner {
 
 		actualDataPath = new File(reader.next());
 
-		System.out.println("Please indicate the index of the class: ");
-		classIndex = reader.nextInt();
 
 		IgniteKnnRequest request = new IgniteKnnRequest();
-		BufferedReader trainingDataReader = null;
-		BufferedReader testDataReader = null;
 		try {
-			trainingDataReader = new BufferedReader(new FileReader(trainingDataPath));
-			testDataReader = new BufferedReader(new FileReader(trainingDataPath));
+			CSVLoader trainingLoader = new CSVLoader();
+			CSVLoader testLoader = new CSVLoader();
+			trainingLoader.setSource(trainingDataPath);
+			testLoader.setSource(actualDataPath);
+			trainingLoader.setNoHeaderRowPresent(true);
+			testLoader.setNoHeaderRowPresent(true);
+
+			Instances trainingData = trainingLoader.getDataSet();
+			Instances testData = testLoader.getDataSet();
 			
-			Instances trainingData = new Instances(trainingDataReader);
-			Instances testData = new Instances(testDataReader);
-			
-			trainingDataReader.close();
-			testDataReader.close();
+			IgniteExecutor executor = IgniteExecutorFactory.createInstance(trainingData);
+
 			// setting class attribute
 			trainingData.setClassIndex(trainingData.numAttributes() - 1);
 			testData.setClassIndex(testData.numAttributes() - 1);
 
-			 request.setTestData(testData);
-			 request.setTrainingData(trainingData);
+			request.setTestData(testData);
+			request.setTrainingData(trainingData);
 
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
-		try {
 			IgniteKnnResponse response = executor.handleRequest(request);
-		} catch (IgniteMLException e) {
+			response.getClassifiedAggregate();
+
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

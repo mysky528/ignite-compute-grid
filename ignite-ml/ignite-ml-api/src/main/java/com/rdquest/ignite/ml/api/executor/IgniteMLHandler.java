@@ -15,6 +15,7 @@ import com.rdquest.ignite.ml.api.exceptions.IgniteMLException;
 import com.rdquest.ignite.ml.api.requests.IgniteMLRequest;
 import com.rdquest.ignite.ml.api.responses.IgniteMLResponse;
 
+import weka.classifiers.Classifier;
 import weka.core.Instances;
 
 /**
@@ -24,15 +25,15 @@ import weka.core.Instances;
  */
 public interface IgniteMLHandler<T extends IgniteMLRequest, T1 extends IgniteMLResponse> {
 
-	public T1 run(T request, ExecutorService exec, Integer numNodes) throws IgniteMLException;
+	public T1 run(T request, ExecutorService exec, Integer numNodes, Classifier classifier) throws IgniteMLException;
 
 	public default List<Instances> scaleDataset(Instances dataset, Integer numNodes) {
 
 		int numInstances = dataset.numInstances();
 
-		if (dataset != null && numInstances > 1) {
+		List<Instances> splitSets = new ArrayList<>();
 
-			List<Instances> splitSets = new ArrayList<>();
+		if (dataset != null && numInstances > 1) {
 
 			int remainder = (numInstances % numNodes);
 			int sizeOfSplitSets = (numInstances / numNodes);
@@ -50,7 +51,7 @@ public interface IgniteMLHandler<T extends IgniteMLRequest, T1 extends IgniteMLR
 			}
 
 		}
-		return null;
+		return splitSets;
 	}
 
 	public default List<Future<T1>> submitTasks(List<IgniteCallable> callables, ExecutorService exec) {

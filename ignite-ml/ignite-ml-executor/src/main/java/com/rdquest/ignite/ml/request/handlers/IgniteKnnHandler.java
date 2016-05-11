@@ -29,9 +29,11 @@ import weka.core.Instances;
 public class IgniteKnnHandler implements IgniteMLHandler<IgniteKnnRequest, IgniteKnnResponse> {
 	
 	private static final Logger log = Logger.getLogger(IgniteKnnHandler.class.getName());
+	
+	
 
 	@Override
-	public IgniteKnnResponse run(IgniteKnnRequest request, ExecutorService exec, Integer numNodes)
+	public IgniteKnnResponse run(IgniteKnnRequest request, ExecutorService exec, Integer numNodes, Classifier classifier)
 			throws IgniteMLException {
 
 		IgniteKnnResponse aggregateResponse = new IgniteKnnResponse();
@@ -76,7 +78,7 @@ public class IgniteKnnHandler implements IgniteMLHandler<IgniteKnnRequest, Ignit
 			throw new IgniteMLException("Unable to perform KNN Classification", e);
 		}
 
-		return null;
+		return aggregateResponse;
 	}
 
 }
