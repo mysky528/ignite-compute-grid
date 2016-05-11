@@ -65,6 +65,6 @@ public interface IgniteMLHandler<T extends IgniteMLRequest, T1 extends IgniteMLR
 
 	}
 	
-	public void trainHandler(Instances trainingData);
+	public void trainHandler(Instances trainingData) throws IgniteMLException;
 
 }

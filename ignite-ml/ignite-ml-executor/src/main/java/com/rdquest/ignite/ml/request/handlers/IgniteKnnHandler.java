@@ -79,13 +79,12 @@ public class IgniteKnnHandler implements IgniteMLHandler<IgniteKnnRequest, Ignit
 	}
 
 	@Override
-	public void trainHandler(Instances trainingData) {
+	public void trainHandler(Instances trainingData) throws IgniteMLException {
 		Classifier ibk = new IBk();
 		try {
 			ibk.buildClassifier(trainingData);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw new IgniteMLException("Unable to train classifier", e);
 		}
 		this.setClassifier(ibk);
 	}

@@ -36,7 +36,7 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 
 	public static final String TRAINING_SET = "Training";
 
-	public IgniteMLExecutor(Instances trainingSet) throws Exception {
+	public IgniteMLExecutor(Instances trainingSet) throws IgniteMLException {
 		IgniteConfiguration configuration = new IgniteConfiguration();
 		
 		configuration.setPeerClassLoadingEnabled(true);
@@ -70,8 +70,9 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 
 	/**
 	 * Used to register the default set of handlers
+	 * @throws IgniteMLException 
 	 */
-	private void registerHandlers(Instances trainingData) {
+	private void registerHandlers(Instances trainingData) throws IgniteMLException {
 		IgniteMLHandler handler = new IgniteKnnHandler();
 		handler.trainHandler(trainingData);
 		handlerMap.put(IgniteKnnRequest.class, handler);
