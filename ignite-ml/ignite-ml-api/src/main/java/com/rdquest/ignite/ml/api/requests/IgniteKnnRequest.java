@@ -12,17 +12,7 @@ import weka.core.Instances;
  */
 public class IgniteKnnRequest extends IgniteMLRequest {
 
-    private Instances trainingData;
-
     private Instances testData;
-
-    public Instances getTrainingData() {
-        return trainingData;
-    }
-
-    public void setTrainingData(Instances trainingData) {
-        this.trainingData = trainingData;
-    }
 
     public Instances getTestData() {
         return testData;

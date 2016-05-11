@@ -30,10 +30,10 @@ public class IgniteKnnHandler implements IgniteMLHandler<IgniteKnnRequest, Ignit
 	
 	private static final Logger log = Logger.getLogger(IgniteKnnHandler.class.getName());
 	
-	
+	private Classifier classifier;	
 
 	@Override
-	public IgniteKnnResponse run(IgniteKnnRequest request, ExecutorService exec, Integer numNodes, Classifier classifier)
+	public IgniteKnnResponse run(IgniteKnnRequest request, ExecutorService exec, Integer numNodes)
 			throws IgniteMLException {
 
 		IgniteKnnResponse aggregateResponse = new IgniteKnnResponse();
@@ -50,11 +50,8 @@ public class IgniteKnnHandler implements IgniteMLHandler<IgniteKnnRequest, Ignit
 
 					@Override
 					public IgniteKnnResponse call() throws Exception {
-						Classifier ibk = new IBk();
-						ibk.buildClassifier(request.getTrainingData());
-
 						for (int i = 0; i < insts.numInstances(); i++) {
-							response.getClassified().put(i, ibk.classifyInstance(insts.instance(i)));
+							response.getClassified().put(i, getClassifier().classifyInstance(insts.instance(i)));
 						}
 
 						return response;
@@ -79,6 +76,26 @@ public class IgniteKnnHandler implements IgniteMLHandler<IgniteKnnRequest, Ignit
 		}
 
 		return aggregateResponse;
+	}
+
+	@Override
+	public void trainHandler(Instances trainingData) {
+		Classifier ibk = new IBk();
+		try {
+			ibk.buildClassifier(trainingData);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		this.setClassifier(ibk);
+	}
+	
+	public Classifier getClassifier() {
+		return classifier;
+	}
+
+	public void setClassifier(Classifier classifier) {
+		this.classifier = classifier;
 	}
 
 }

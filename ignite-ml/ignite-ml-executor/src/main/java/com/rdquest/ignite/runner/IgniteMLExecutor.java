@@ -36,23 +36,14 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 
 	public static final String TRAINING_SET = "Training";
 
-	private Instances trainingSet;
-
-	private Classifier classifier;
-
 	public IgniteMLExecutor(Instances trainingSet) throws Exception {
 		IgniteConfiguration configuration = new IgniteConfiguration();
-		
-		Classifier ibk = new IBk();
-		ibk.buildClassifier(trainingSet);
-		this.setClassifier(ibk);
 		
 		configuration.setPeerClassLoadingEnabled(true);
 		Ignite ignite = Ignition.start(configuration);
 		this.setIgniteInstance(ignite);
-		this.setTrainingSet(trainingSet);
 
-		registerHandlers();
+		registerHandlers(trainingSet);
 	}
 
 	@Override
@@ -62,7 +53,7 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 		if (handler == null) {
 			throw new IgniteMLException("Unable to find handler for request class: " + request.getClass().getName());
 		}
-		return handler.run(request, igniteInstance.executorService(), igniteInstance.cluster().nodes().size(), getClassifier());
+		return handler.run(request, igniteInstance.executorService(), igniteInstance.cluster().nodes().size());
 	}
 
 	/**
@@ -80,8 +71,10 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 	/**
 	 * Used to register the default set of handlers
 	 */
-	private void registerHandlers() {
-		handlerMap.put(IgniteKnnRequest.class, new IgniteKnnHandler());
+	private void registerHandlers(Instances trainingData) {
+		IgniteMLHandler handler = new IgniteKnnHandler();
+		handler.trainHandler(trainingData);
+		handlerMap.put(IgniteKnnRequest.class, handler);
 
 	}
 
@@ -103,21 +96,4 @@ public final class IgniteMLExecutor implements IgniteExecutor {
 	private void setIgniteInstance(Ignite igniteInstance) {
 		this.igniteInstance = igniteInstance;
 	}
-
-	public Instances getTrainingSet() {
-		return trainingSet;
-	}
-
-	public void setTrainingSet(Instances trainingSet) {
-		this.trainingSet = trainingSet;
-	}
-
-	public Classifier getClassifier() {
-		return classifier;
-	}
-
-	public void setClassifier(Classifier classifier) {
-		this.classifier = classifier;
-	}
-
 }

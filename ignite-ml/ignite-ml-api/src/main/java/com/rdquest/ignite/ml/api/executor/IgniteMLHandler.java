@@ -25,7 +25,7 @@ import weka.core.Instances;
  */
 public interface IgniteMLHandler<T extends IgniteMLRequest, T1 extends IgniteMLResponse> {
 
-	public T1 run(T request, ExecutorService exec, Integer numNodes, Classifier classifier) throws IgniteMLException;
+	public T1 run(T request, ExecutorService exec, Integer numNodes) throws IgniteMLException;
 
 	public default List<Instances> scaleDataset(Instances dataset, Integer numNodes) {
 
@@ -64,5 +64,7 @@ public interface IgniteMLHandler<T extends IgniteMLRequest, T1 extends IgniteMLR
 		return futures;
 
 	}
+	
+	public void trainHandler(Instances trainingData);
 
 }
